@@ -9,7 +9,7 @@ BINDIR = /usr/local/bin
 SOURCES = $(wildcard $(SRCDIR)/*.c)
 
 CC = gcc
-CFLAGS = -Wall -Wextra -I$(INCDIR) -I$(ARM_INCDIR) $(LIBS)
+CFLAGS = -Wall -Wextra -I$(INCDIR) -I$(ARM_INCDIR)
 
 .PHONY: all clean install uninstall
 
@@ -17,7 +17,7 @@ all: $(TARGET) install
 
 $(TARGET): $(SOURCES)
 	@mkdir -p build
-	$(CC) $(CFLAGS) $^ -o build/$@
+	$(CC) $(CFLAGS) $^ $(LIBS) -o build/$@
 
 install: $(TARGET)
 	@echo "Installing $(TARGET) to $(BINDIR)..."

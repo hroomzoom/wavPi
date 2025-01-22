@@ -113,7 +113,7 @@ int pcm_write(PCM *pcm, short *buffer, size_t frames){
 }
 
 void close_pcm(PCM* pcm){
-    	snd_pcm_drain(pcm->handle);
+    snd_pcm_drain(pcm->handle);
 	snd_pcm_close(pcm->handle);
 }
 
