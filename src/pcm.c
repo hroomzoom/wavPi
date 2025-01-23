@@ -77,15 +77,15 @@ int setup_pcm_sw(PCM *pcm){
     unsigned int avail_min = PERIOD_SIZE;
     unsigned int start_threshold = BUFFER_SIZE;
     unsigned int stop_threshold = BUFFER_SIZE;
-    unsigned int silence_threshold = 0;
-    unsigned int silence_size = 0;
+    // unsigned int silence_threshold = 0;
+    // unsigned int silence_size = 0;
 
     snd_pcm_sw_params_alloca(&pcm->swparams);
     snd_pcm_sw_params_set_avail_min(pcm->handle, pcm->swparams, avail_min);
     snd_pcm_sw_params_set_start_threshold(pcm->handle, pcm->swparams, start_threshold);
     snd_pcm_sw_params_set_stop_threshold(pcm->handle, pcm->swparams, stop_threshold);
-    snd_pcm_sw_params_set_silence_threshold(pcm->handle, pcm->swparams, silence_threshold);
-    snd_pcm_sw_params_set_silence_size(pcm->handle, pcm->swparams, silence_size);
+    // snd_pcm_sw_params_set_silence_threshold(pcm->handle, pcm->swparams, silence_threshold);
+    // snd_pcm_sw_params_set_silence_size(pcm->handle, pcm->swparams, silence_size);
     pcm->res = snd_pcm_sw_params(pcm->handle, pcm->swparams);
     if (pcm->res < 0) {
         fprintf(stderr, "Failed to set hardware parameters: %s\n", snd_strerror(pcm->res));
