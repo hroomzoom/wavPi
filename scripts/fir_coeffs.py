@@ -49,7 +49,7 @@ def calculate_coeffs():
                         fs= sampling_freq)
         coeffs_f32 = np.array(coeffs).astype(np.float32)
 
-        print(coeffs_f32)
+        return coeffs_f32
 
 if __name__ == "__main__":
     calculate_coeffs()

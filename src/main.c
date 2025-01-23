@@ -25,13 +25,6 @@ int main(int argc, char **argv){
         return EXIT_FAILURE;
     }
 
-    if (strcmp("--fir-gen", argv[1]) == 0){
-        const char *script = "/home/pi/c_apps/wavPi/scripts/fir_coeffs.py";
-        float cut_offs[1] = {8000};
-        generate_fir_coeffs(script, 101, 48000,"highpass","triang", cut_offs,1);
-        return 0;
-    }
-
     //Open and read wav paramters
     PCM *pcm = (PCM *)malloc(sizeof(PCM));
     if (!pcm) {
