@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "sndfile.h": "c",
-        "asoundlib.h": "c"
+        "asoundlib.h": "c",
+        "pcm.h": "c"
     }
 }

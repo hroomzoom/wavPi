@@ -1,19 +1,11 @@
 #include "fir.h"
 
-int fir_init(FIR *fir, float32_t *state, const float32_t *coeffs){
+int fir_init(FIR *fir, float32_t *state, const float32_t *coeffs, int num_taps){
     
-    arm_fir_init_f32(&fir->inst, NUM_TAPS, coeffs, state, PERIOD_SIZE);
+    arm_fir_init_f32(&fir->inst, num_taps, coeffs, state, PERIOD_SIZE);
     fir->raw = (float32_t *)malloc(PERIOD_SIZE * sizeof(float32_t));
-    if(!fir->raw) {
-        printf("Failed to allocate memory\n");
-        return FIR_FAIL;
-    }
-
     fir->filtered = (float32_t *)malloc(PERIOD_SIZE * sizeof(float32_t));
-    if(!fir->filtered) {
-        printf("Failed to allocate memory\n");
-        return FIR_FAIL;
-    }
+ 
     return FIR_SUCCESS;
 }
 
