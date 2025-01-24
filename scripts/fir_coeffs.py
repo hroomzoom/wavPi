@@ -14,7 +14,7 @@ window_list = [
     "triang",
     "nuttall",
     "exponential",
-    # "kaiser",
+    "kaiser",
     "chebwin"
 ]
 
@@ -43,11 +43,21 @@ def calculate_coeffs():
         print("filter type not supported")
 
     else:
-        coeffs = firwin(numtaps= num_taps, 
-                        cutoff= cut_off, 
-                        window= window, 
-                        pass_zero= filter_type, 
-                        fs= sampling_freq)
+        coeffs = []
+        if(window == "kaiser"):
+            coeffs = firwin(numtaps= num_taps, 
+                            cutoff= cut_off, 
+                            window= ('kaiser', 14), 
+                            pass_zero= filter_type, 
+                            fs= sampling_freq)
+
+        else:
+            coeffs = firwin(numtaps= num_taps, 
+                            cutoff= cut_off, 
+                            window= window, 
+                            pass_zero= filter_type, 
+                            fs= sampling_freq)
+            
         coeffs_f32 = np.array(coeffs).astype(np.float32)
         
         #print coeffs and num taps

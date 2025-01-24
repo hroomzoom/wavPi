@@ -86,6 +86,7 @@ void usage(const char* arg_zero){
     printf(" --low\n");  //low pass
     printf(" --high\n"); //high pass
     printf(" --band\n"); //band pass
+    printf(" --norm\n"); //normal
 }
 
 int main(int argc, char **argv){
@@ -100,7 +101,8 @@ int main(int argc, char **argv){
     char *filter_str = argv[2];
     if(strcmp(filter_str,"--low") != 0 && 
        strcmp(filter_str,"--high") != 0 && 
-       strcmp(filter_str,"--band") != 0){
+       strcmp(filter_str,"--band") != 0 &&
+       strcmp(filter_str,"--norm")){
         usage(argv[0]);
         return EXIT_FAILURE;
     }
@@ -135,6 +137,8 @@ int main(int argc, char **argv){
         return EXIT_FAILURE;
     }
     //Init based on selected filter
+    int filter_on = 0;
+
     if(strcmp(filter_str,"--low") == 0){
         status = fir_init(left_fir, lowpass_state, lowpass_coeffs, LOWPASS_NUM_TAPS);
         if(status != FIR_SUCCESS)
@@ -142,6 +146,8 @@ int main(int argc, char **argv){
         status = fir_init(right_fir, lowpass_state, lowpass_coeffs, LOWPASS_NUM_TAPS);
         if(status != FIR_SUCCESS)
             return FIR_FAIL;
+        
+        filter_on = 1;
     }
     else if(strcmp(filter_str,"--high") == 0){
         status = fir_init(left_fir, highpass_state, highpass_coeffs, HIGHPASS_NUM_TAPS);
@@ -150,9 +156,10 @@ int main(int argc, char **argv){
         status = fir_init(right_fir, highpass_state, highpass_coeffs, HIGHPASS_NUM_TAPS);
         if(status != FIR_SUCCESS)
             return FIR_FAIL;
-
+        
+        filter_on = 1;
     }
-    else{
+    else if(strcmp(filter_str,"--band") == 0){
          status = fir_init(left_fir, bandpass_state, bandpass_coeffs, BANDPASS_NUM_TAPS);
         if(status != FIR_SUCCESS)
             return FIR_FAIL;
@@ -160,6 +167,7 @@ int main(int argc, char **argv){
         if(status != FIR_SUCCESS)
             return FIR_FAIL;
 
+        filter_on = 1;
     }
     
     //Set up buffers
@@ -177,8 +185,13 @@ int main(int argc, char **argv){
         size_t frames_read = pcm_read(pcm, in_buffer, PERIOD_SIZE);
         if(frames_read == 0)
             break;
-        fir_process(left_fir, right_fir, in_buffer, out_buffer, frames_read);
-        status = pcm_write(pcm, out_buffer, frames_read);
+        if(filter_on){
+            fir_process(left_fir, right_fir, in_buffer, out_buffer, frames_read);
+            status = pcm_write(pcm, out_buffer, frames_read);
+        }
+        else
+            status = pcm_write(pcm, in_buffer, frames_read);
+
         if(status != PCM_VALID)
             break;
     }
