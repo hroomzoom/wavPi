@@ -16,8 +16,6 @@ typedef struct {
     int running;  
 } thread_args_t;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 void setup_pcm(PCM *pcm, const char *wav_file);
 void *audio_process(void *arg);
 void *input_process(void *arg);
