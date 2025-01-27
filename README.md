@@ -41,7 +41,7 @@
 4. **Run the Program**
    Start the audio processing application:
    ```bash
-   ./wavpi
+   ./wavpi <path/to/wav>
    ```
 
 ## Usage
