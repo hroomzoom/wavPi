@@ -1,6 +1,6 @@
 
 TARGET = wavpi
-LIBS = -lsndfile -lasound -lpthread -lm
+LIBS = -lsndfile -lasound -lpthread -lm -lncurses
 
 SRCDIR = src
 INCDIR = include
