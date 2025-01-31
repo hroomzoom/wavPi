@@ -5,7 +5,7 @@
 
 #define SAMPLE_RATE 48000
 #define MIN_FREQ 1
-#define MAX_FREQ
+#define MAX_FREQ 20
 
 float32_t lfo_phase = 0.0f;
 float32_t increment = 0.0f;
