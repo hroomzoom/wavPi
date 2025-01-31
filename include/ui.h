@@ -10,6 +10,12 @@
 #define LEVEL_COLOR   2
 #define CHANNEL_COLOR 3
 
+#define l_KEY   108
+#define h_KEY   104
+#define b_KEY   98
+#define n_KEY   110
+#define ESC_KEY 27
+
 int levels[NUM_CHANNELS] = {50, 50};
 const char *channel_names[NUM_CHANNELS] = {"LFO_DEPTH", "LFO_FREQ"};
 
@@ -43,6 +49,11 @@ void draw_ui(int selected) {
 
         mvprintw(y + 11, x - 2, "[%3d%%]", levels[i]);
     }
+
+    attron(COLOR_PAIR(ITEM_COLOR));
+    mvprintw(18, 0, "[ FIR Control ] Low Pass: l  High Pass: h  Band Pass: b  None: n  Stop: ESC");
+    attroff(COLOR_PAIR(ITEM_COLOR));
+
     refresh();
 }
 

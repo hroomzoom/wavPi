@@ -100,15 +100,19 @@ void *audio_process(void *arg){
     setup_fir(left_band, right_band, "band");
 
     short *in_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
+    short *trem_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
     short *out_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
 
     int status;
+    int running;
+    char* filter_str;
     float32_t lfo_freq, lfo_depth;
 
     while(1){
         
         pthread_mutex_lock(&args->mutex);
-        int running = args->running; 
+        running = args->running; 
+        filter_str = args->filter;
         lfo_freq = args->lfo_freq;
         lfo_depth = args->lfo_depth;  
         pthread_mutex_unlock(&args->mutex);
@@ -119,11 +123,24 @@ void *audio_process(void *arg){
         size_t frames_read = pcm_read(args->pcm, in_buffer, PERIOD_SIZE);
         if(frames_read == 0)
             break;
-        
 
-        process_tremolo(in_buffer, out_buffer, lfo_freq, lfo_depth, PERIOD_SIZE);
-        status = pcm_write(args->pcm, out_buffer, frames_read);
-        
+        //fir filtering
+        if(strcmp(filter_str, "low") == 0)
+            fir_process(left_low, right_low, in_buffer, out_buffer, frames_read);
+
+        else if(strcmp(filter_str, "high") == 0)
+            fir_process(left_high, right_high, in_buffer, out_buffer, frames_read);
+
+        else if(strcmp(filter_str, "band") == 0)
+            fir_process(left_band, right_band, in_buffer, out_buffer, frames_read);
+    
+        //apply lfo
+        if(strcmp(filter_str, "none") == 0)
+            process_tremolo(in_buffer, trem_buffer, lfo_freq, lfo_depth, PERIOD_SIZE);
+        else
+            process_tremolo(out_buffer, trem_buffer, lfo_freq, lfo_depth, PERIOD_SIZE);
+
+        status = pcm_write(args->pcm, trem_buffer, frames_read);
         if(status != PCM_VALID)
             break;
     }
@@ -135,6 +152,7 @@ void *audio_process(void *arg){
     free(left_band);
     free(right_band);
     free(in_buffer);
+    free(trem_buffer);
     free(out_buffer);
 
     return NULL;
@@ -189,7 +207,19 @@ void *input_process(void *arg) {
                         args->lfo_freq = (levels[selected] / 100.0f) * 19 + 1;
                 }
                 break;
-            case 27: // Escape key
+            case l_KEY:
+                args->filter = "low";
+                break;
+            case h_KEY:
+                args->filter = "high";
+                break;
+            case b_KEY:
+                args->filter = "band";
+                break;
+            case n_KEY:
+                args->filter = "none";
+                break;
+            case ESC_KEY: // Escape key
                 args->running = 0;
                 pthread_mutex_unlock(&args->mutex);
                 endwin();
