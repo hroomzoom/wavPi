@@ -5,13 +5,19 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "pcm.h"
 #include "fir.h"
 #include "coeffs.h"
+#include "lfo.h"
+#include "ui.h"
+
 
 typedef struct {
     PCM *pcm;
     char *filter;
+    float32_t lfo_freq;
+    float32_t lfo_depth;
     pthread_mutex_t mutex;
     int running;  
 } thread_args_t;
@@ -36,6 +42,8 @@ int main(int argc, char **argv){
     args.pcm = pcm;
     args.filter = "none";
     args.running = 1;
+    args.lfo_depth = levels[0]/100.0f;
+    args.lfo_freq = (levels[0]/100.0f)*19 + 1;
     pthread_mutex_init(&args.mutex, NULL);
     
 
@@ -92,16 +100,21 @@ void *audio_process(void *arg){
     setup_fir(left_band, right_band, "band");
 
     short *in_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
+    short *trem_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
     short *out_buffer = (short *)malloc(PERIOD_SIZE * args->pcm->channels * sizeof(short));
 
     int status;
-    char *filter_str;
+    int running;
+    char* filter_str;
+    float32_t lfo_freq, lfo_depth;
 
     while(1){
         
         pthread_mutex_lock(&args->mutex);
-        int running = args->running; 
-        filter_str = args->filter;  
+        running = args->running; 
+        filter_str = args->filter;
+        lfo_freq = args->lfo_freq;
+        lfo_depth = args->lfo_depth;  
         pthread_mutex_unlock(&args->mutex);
 
         if (!running)
@@ -111,21 +124,23 @@ void *audio_process(void *arg){
         if(frames_read == 0)
             break;
 
-        if(strcmp(filter_str, "low") == 0){
+        //fir filtering
+        if(strcmp(filter_str, "low") == 0)
             fir_process(left_low, right_low, in_buffer, out_buffer, frames_read);
-            status = pcm_write(args->pcm, out_buffer, frames_read);
-        }
-        else if(strcmp(filter_str, "high") == 0){
-            fir_process(left_high, right_high, in_buffer, out_buffer, frames_read);
-            status = pcm_write(args->pcm, out_buffer, frames_read);
-        }
-        else if(strcmp(filter_str, "band") == 0){
-            fir_process(left_band, right_band, in_buffer, out_buffer, frames_read);
-            status = pcm_write(args->pcm, out_buffer, frames_read);
-        }
-        else
-            status = pcm_write(args->pcm, in_buffer, frames_read);
 
+        else if(strcmp(filter_str, "high") == 0)
+            fir_process(left_high, right_high, in_buffer, out_buffer, frames_read);
+
+        else if(strcmp(filter_str, "band") == 0)
+            fir_process(left_band, right_band, in_buffer, out_buffer, frames_read);
+    
+        //apply lfo
+        if(strcmp(filter_str, "none") == 0)
+            process_tremolo(in_buffer, trem_buffer, lfo_freq, lfo_depth, PERIOD_SIZE);
+        else
+            process_tremolo(out_buffer, trem_buffer, lfo_freq, lfo_depth, PERIOD_SIZE);
+
+        status = pcm_write(args->pcm, trem_buffer, frames_read);
         if(status != PCM_VALID)
             break;
     }
@@ -137,6 +152,7 @@ void *audio_process(void *arg){
     free(left_band);
     free(right_band);
     free(in_buffer);
+    free(trem_buffer);
     free(out_buffer);
 
     return NULL;
@@ -144,33 +160,74 @@ void *audio_process(void *arg){
 
 void *input_process(void *arg) {
     thread_args_t *args = (thread_args_t *)arg;
-    char input;
+    int input;
+    int selected = 0;
 
-    while (1) {
-        printf("Enter filter type (l = low, h = high, b = band, n = none, q = quit): ");
-        input = getchar();
-        while (getchar() != '\n');
+    initscr();
+    noecho();
+    cbreak();
+    keypad(stdscr, 1);
+    curs_set(0);
 
-        pthread_mutex_lock(&args->mutex);
-
-        if (input == 'q') {
-            args->running = 0; 
-            pthread_mutex_unlock(&args->mutex);
-            break; 
-        }
-
-        if (input == 'l')
-            args->filter = "low";
-        else if (input == 'h')
-            args->filter = "high";
-        else if (input == 'b')
-            args->filter = "band";
-        else
-            args->filter = "none";
-
-        pthread_mutex_unlock(&args->mutex);
+    if (has_colors()) {
+        start_color();
+        init_pair(LEVEL_COLOR, COLOR_GREEN, COLOR_BLACK); // Slider level
+        init_pair(ITEM_COLOR, COLOR_WHITE, COLOR_BLACK); // Top bar
+        init_pair(CHANNEL_COLOR, COLOR_BLACK,  COLOR_GREEN); // Highlighted channel
     }
 
+    while (1) {
+        
+        draw_ui(selected);
+        input = getch();
+
+        pthread_mutex_lock(&args->mutex);
+        switch (input) {
+            case KEY_LEFT:
+                selected = (selected - 1 + NUM_CHANNELS) % NUM_CHANNELS;
+                break;
+            case KEY_RIGHT:
+                selected = (selected + 1) % NUM_CHANNELS;
+                break;
+            case KEY_UP:
+                if (levels[selected] < 100) {
+                    levels[selected] += 10;
+                    if (selected == 0)
+                        args->lfo_depth = levels[selected] / 100.0f;
+                    else
+                        args->lfo_freq = (levels[selected] / 100.0f) * 19 + 1;
+                }
+                break;
+            case KEY_DOWN:
+                if (levels[selected] > 0) {
+                    levels[selected] -= 10;
+                    if (selected == 0)
+                        args->lfo_depth = levels[selected] / 100.0f;
+                    else
+                        args->lfo_freq = (levels[selected] / 100.0f) * 19 + 1;
+                }
+                break;
+            case l_KEY:
+                args->filter = "low";
+                break;
+            case h_KEY:
+                args->filter = "high";
+                break;
+            case b_KEY:
+                args->filter = "band";
+                break;
+            case n_KEY:
+                args->filter = "none";
+                break;
+            case ESC_KEY: // Escape key
+                args->running = 0;
+                pthread_mutex_unlock(&args->mutex);
+                endwin();
+                return NULL;
+        }
+        pthread_mutex_unlock(&args->mutex);
+    }
+    endwin();
     return NULL;
 }
 
